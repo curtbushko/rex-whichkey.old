@@ -1,0 +1,76 @@
+version: '3'
+
+tasks:
+  default:
+    cmds:
+      - task --list
+
+  fmt:
+    desc: Format Nix, Lua, and Bash sources
+    cmds:
+      - alejandra flake.nix nix
+      - stylua .luacheckrc lua tests examples
+      - shfmt -w lua/whichkey/*.sh tests/*.sh
+
+  fmt-check:
+    desc: Check formatting without changing files
+    cmds:
+      - alejandra --check flake.nix nix
+      - stylua --check .luacheckrc lua tests examples
+      - shfmt -d lua/whichkey/*.sh tests/*.sh
+
+  fmt-lua:
+    desc: Format Lua sources, tests, examples, and lint configuration
+    cmds:
+      - stylua .luacheckrc lua tests examples
+
+  fmt-check-lua:
+    desc: Check Lua formatting
+    cmds:
+      - stylua --check .luacheckrc lua tests examples
+
+  lint-lua:
+    desc: Run Luacheck and Lua 5.1 compatibility checks
+    cmds:
+      - luacheck lua tests examples
+      - task check-lua51
+
+  check-lua51:
+    desc: Parse Rex-facing modules and examples with Lua 5.1 (inside nix develop)
+    cmds:
+      - >-
+        "$LUA51_LUAC" -p lua/whichkey/areas.lua lua/whichkey/config.lua
+        lua/whichkey/mappings.lua lua/whichkey/plugin.lua lua/whichkey/resize.lua
+        examples/init.lua
+
+  lint-bash:
+    desc: Check Bash libraries/tests and the packaged helper
+    cmds:
+      - shellcheck --external-sources lua/whichkey/theme.sh tests/*.sh
+      - nix build --no-link .#default
+
+  lint:
+    desc: Run Lua and Bash static analysis
+    cmds:
+      - task lint-lua
+      - task lint-bash
+
+  test:
+    desc: Run Lua and Bash tests, including the packaged helper integration tests
+    cmds:
+      - for suite in tests/*.lua; do lua "$suite" || exit; done
+      - bash tests/rex_theme_test.sh
+      - bash tests/rex_whichkey_test.sh
+
+  build:
+    desc: Build the helper and Lua plugin entry point
+    cmds:
+      - nix build .#default .#plugin
+
+  check:
+    desc: Run formatting, lint, tests, and flake checks
+    cmds:
+      - task fmt-check
+      - task lint
+      - task test
+      - nix flake check
