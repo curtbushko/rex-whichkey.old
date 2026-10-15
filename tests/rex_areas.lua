@@ -7,6 +7,10 @@ for key in pairs(Config.window) do
 end
 local public = Areas.options({ position = "left" }, { cols = 100, rows = 40 })
 assert(public.position == "left" and public.cols == 100 and public.rows == 40)
+assert(
+	Areas.resolve(public).backend == "overlay",
+	"keep the overlay workaround until native layers are verified in Rex"
+)
 assert(Areas.options(nil, { cols = 100, rows = 40 }, "top").position == "top")
 for _, key in ipairs({ "backend", "width", "max_height", "gap", "cols", "rows" }) do
 	assert(not pcall(Areas.options, { [key] = 1 }, { cols = 100, rows = 40 }), "reject private user settings: " .. key)
@@ -124,6 +128,9 @@ for _, position in ipairs({ "top", "bottom", "left", "right", "center" }) do
 	local output = table.concat(chunks)
 	assert(output:match("^%d+ %d+ %d+\n\27%[0m"), "numeric metadata followed by a reset-first frame")
 	assert(output:find("[w]", 1, true), "the actual menu is rendered")
+	if position == "center" then
+		assert(not output:find("\27[1;1H", 1, true), "centered overlay painting must keep window-relative coordinates")
+	end
 	if position ~= "top" and position ~= "bottom" then
 		assert(output:find("+", 1, true))
 	end
