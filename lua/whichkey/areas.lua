@@ -121,8 +121,8 @@ function M.draw(area, lines, styles)
 	end
 	local out = { "\27[0m\27[3J\27[2J\27[?25l" }
 	local bg, fg, border = styles.background or "", styles.text or "", styles.border or ""
-	local function put(x, y, text, surface)
-		out[#out + 1] = string.format("\27[%d;%dH", y + dy, x + dx) .. (surface or bg) .. text
+	local function put(x, y, text)
+		out[#out + 1] = string.format("\27[%d;%dH", y + dy, x + dx) .. bg .. text
 	end
 	local rounded = area.border and not styles.ascii
 	for row = 0, b.rows - 1 do
@@ -135,12 +135,10 @@ function M.draw(area, lines, styles)
 			tl, tr, bl, br, horizontal, vertical = "+", "+", "+", "+", "-", "|"
 		end
 		if rounded then
-			-- Default-background corner cells reveal the underlying pane instead
-			-- of filling a square behind the curved border glyphs.
 			for _, edge in ipairs({ { b.y, tl, tr }, { b.y + b.rows - 1, bl, br } }) do
-				put(b.x, edge[1], border .. edge[2], "\27[49m")
+				put(b.x, edge[1], border .. edge[2])
 				put(b.x + 1, edge[1], border .. string.rep(horizontal, b.cols - 2))
-				put(b.x + b.cols - 1, edge[1], border .. edge[3], "\27[49m")
+				put(b.x + b.cols - 1, edge[1], border .. edge[3])
 			end
 		else
 			put(b.x, b.y, border .. tl .. string.rep(horizontal, b.cols - 2) .. tr)

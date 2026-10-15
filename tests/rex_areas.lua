@@ -54,8 +54,8 @@ for _, name in ipairs({ "top", "bottom", "left", "right", "center" }) do
 			{ b.x + b.cols - 1, b.y + b.rows - 1, "╯" },
 		}) do
 			assert(
-				rounded:find(string.format("\27[%d;%dH\27[49mBD%s", corner[2], corner[1], corner[3]), 1, true),
-				"rounded corner cells must not paint a square background"
+				rounded:find(string.format("\27[%d;%dHBGBD%s", corner[2], corner[1], corner[3]), 1, true),
+				"rounded corner cells must retain the popup background"
 			)
 		end
 	end

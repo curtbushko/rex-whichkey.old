@@ -3,6 +3,8 @@
 A theme-aware which-key popup for [Rex](https://www.superlogical.com/rex/).
 Define nested menus in Lua, then select actions by typing their displayed keys.
 
+![Which-key popup in Rex](docs/screenshot.png)
+
 - Full-width top/bottom bars or left/right/center popup boxes.
 - Icons, breadcrumbs, confirmation prompts, automatic sizing, and paging.
 - Colors read from the terminal theme, including submenu and destructive-action colors.
