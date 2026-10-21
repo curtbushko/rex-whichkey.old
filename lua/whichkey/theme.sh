@@ -3,6 +3,7 @@
 set -euo pipefail
 declare -A terminal_colors=()
 terminal_pending_keys='' terminal_theme_stty=''
+terminal_input_osc=0 terminal_input_escape=0
 
 terminal_theme_parse() {
 	local pattern='^(10|11|4;[0-9]+);rgb:([[:xdigit:]]{1,4})/([[:xdigit:]]{1,4})/([[:xdigit:]]{1,4})$'
@@ -20,11 +21,16 @@ terminal_theme_parse() {
 }
 
 terminal_theme_collect() {
-	local byte='' frame='' deadline status oversized=0
-	# Bash 5's clock gives one total budget, not a timeout per color/byte.
-	deadline=$((${EPOCHREALTIME/./} + 350000))
-	while ((${EPOCHREALTIME/./} < deadline)); do
-		if IFS= read -r -s -N 1 -t 0.05 byte; then
+	local byte='' frame='' deadline status oversized=0 remaining timeout
+	terminal_input_osc=0 terminal_input_escape=0
+	# Theme replies are normally immediate. Never hold the first frame for a
+	# missing palette slot; use the supplied fallbacks after a 50 ms total budget.
+	deadline=$((${EPOCHREALTIME/./} + 50000))
+	while true; do
+		remaining=$((deadline - ${EPOCHREALTIME/./}))
+		if ((remaining <= 0)); then break; fi
+		printf -v timeout '0.%06d' "$remaining"
+		if IFS= read -r -s -N 1 -t "$timeout" byte; then
 			:
 		else
 			status=$?
@@ -52,7 +58,35 @@ terminal_theme_collect() {
 	done
 	# Preserve a user's lone Escape, but never feed incomplete OSC replies to
 	# menu navigation (their leading Escape would close the popup).
-	if [[ "$frame" == $'\033' ]]; then terminal_pending_keys+=$frame; fi
+	if [[ "$frame" == $'\033' ]]; then
+		terminal_pending_keys+=$frame
+	elif [[ -n "$frame" ]]; then
+		terminal_input_osc=1
+		if [[ "$frame" == *$'\033' ]]; then terminal_input_escape=1; fi
+	fi
+}
+
+# A reply arriving after the startup budget is terminal traffic, not menu input.
+# Keep OSC state across reads so even fragmented late replies cannot close the
+# popup with their leading Escape or accidentally dispatch one of their bytes.
+terminal_key_filter() {
+	local next=''
+	if ((terminal_input_osc)); then
+		if [[ "$1" == $'\007' || ($terminal_input_escape == 1 && "$1" == $'\\') ]]; then
+			terminal_input_osc=0
+		fi
+		terminal_input_escape=0
+		if [[ "$1" == $'\033' ]]; then terminal_input_escape=1; fi
+		return 1
+	fi
+	if [[ "$1" == $'\033' ]] && IFS= read -r -s -N 1 -t 0.005 next; then
+		if [[ "$next" == ']' ]]; then
+			terminal_input_osc=1
+			return 1
+		fi
+		terminal_pending_keys="$next$terminal_pending_keys"
+	fi
+	return 0
 }
 
 terminal_theme_restore() {

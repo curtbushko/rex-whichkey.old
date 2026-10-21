@@ -62,6 +62,23 @@ tasks:
       - bash tests/rex_theme_test.sh
       - bash tests/rex_whichkey_test.sh
 
+  run:
+    desc: Preview which-key centered in this terminal
+    cmds:
+      - task: test:manual
+        vars:
+          POSITION: center
+
+  test:manual:
+    desc: Preview the current checkout in this terminal without executing Rex actions
+    interactive: true
+    env:
+      REX_PREVIEW_POSITION: '{{.POSITION | default "bottom"}}'
+    cmds:
+      - |
+        package="$(nix build --no-link --print-out-paths .#default)" || exit
+        bash tests/rex_preview.sh "$package/bin/rex-whichkey" "$REX_PREVIEW_POSITION"
+
   build:
     desc: Build the helper and Lua plugin entry point
     cmds:

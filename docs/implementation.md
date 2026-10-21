@@ -19,11 +19,14 @@ See the [README](../README.md) for installation and configuration.
 - `renderer.lua`, `layout.lua`, and `text.lua` produce Unicode-aware columns,
   centered headings, footers, content sizing, and pagination.
 - `theme.sh` queries the inherited terminal theme before painting. It validates
-  OSC replies, bounds the whole query, restores input settings, and preserves
-  typeahead. NO_COLOR and non-TTY output skip discovery.
+  OSC replies, limits discovery to 50 ms total, restores input settings, and
+  preserves typeahead. Late OSC replies are filtered out of menu input.
+  NO_COLOR and non-TTY output skip discovery.
 - `areas.lua` isolates placement, painting, framing, and the current clipping
   workaround. `resize.lua` measures the originating pane/window through Rex
-  APIs and applies changed bounds only.
+  APIs and applies changed bounds only. The overlay helper measures geometry
+  once per draw and renders once; it needs no content-dependent resize round trip.
+  Enabling the native backend would also require restoring that resize step.
 
 The frontend requires Lua 5.4, luautf8, and dkjson. The packaged helper uses Bash
 5. The Rex-side modules do not depend on those external Lua libraries.

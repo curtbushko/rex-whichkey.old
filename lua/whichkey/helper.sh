@@ -108,15 +108,16 @@ resized=0 terminal_size=""
 trap 'resized=1' WINCH
 read_key() {
 	local status size
-	if [[ -n "$terminal_pending_keys" ]]; then
-		key="${terminal_pending_keys:0:1}"
-		terminal_pending_keys="${terminal_pending_keys:1}"
-		return 0
-	fi
 	while true; do
+		if [[ -n "$terminal_pending_keys" ]]; then
+			key="${terminal_pending_keys:0:1}"
+			terminal_pending_keys="${terminal_pending_keys:1}"
+			return 0
+		fi
 		resized=0 key=""
 		if IFS= read -r -s -n 1 -t 0.25 key; then
 			if ((resized)); then render; fi
+			if ! terminal_key_filter "$key"; then continue; fi
 			[[ -n "$key" ]]
 			return
 		else
@@ -132,45 +133,42 @@ read_key() {
 	done
 }
 render() {
-	local rows="${LINES:-20}" cols="${COLUMNS:-72}" size rendered metadata requested_rows=0 dimensions mode=plain attempt
+	local rows="${LINES:-20}" cols="${COLUMNS:-72}" size rendered metadata dimensions mode=plain
 	if [[ -t 0 && -t 1 ]]; then mode=ansi; fi
-	# Measure the originating window before layout, then apply the backend's
-	# bounds. Overlay mode is a no-op; native mode resizes the actual layer.
-	for attempt in 1 2; do
-		if [[ -t 0 ]] && command -v stty >/dev/null; then
-			size="$(stty size 2>/dev/null || true)"
-			terminal_size="$size"
-			if [[ "$size" =~ ^([0-9]+)[[:space:]]+([0-9]+)$ ]]; then
-				rows="${BASH_REMATCH[1]}"
-				cols="${BASH_REMATCH[2]}"
-			fi
+	# The overlay keeps full-window bounds. Measure once; content placement and
+	# shrinking are already handled by Areas.render inside the Lua renderer.
+	if [[ -t 0 ]] && command -v stty >/dev/null; then
+		size="$(stty size 2>/dev/null || true)"
+		terminal_size="$size"
+		if [[ "$size" =~ ^([0-9]+)[[:space:]]+([0-9]+)$ ]]; then
+			rows="${BASH_REMATCH[1]}"
+			cols="${BASH_REMATCH[2]}"
 		fi
-		if [[ ! "$rows" =~ ^[0-9]+$ ]]; then rows=20; fi
-		if [[ ! "$cols" =~ ^[0-9]+$ ]]; then cols=72; fi
-		if [[ "$mode" == ansi ]]; then
-			if ! dimensions=$("$rex" -C "$client" "do" @REX_WHICHKEY_DIRECTORY@/resize.lua -s "$session" -b "$origin" "rows=$((attempt == 1 ? 0 : requested_rows))" "directory=@REX_WHICHKEY_DIRECTORY@" "position=$position" --json); then
-				printf 'Could not calculate which-key rendering area\n' >&2
-				return 1
-			fi
-			dimensions="${dimensions//[$' \t\r\n']/}"
-			if [[ ! "$dimensions" =~ ^\[([1-9][0-9]*),([1-9][0-9]*)\]$ ]]; then
-				printf 'Invalid which-key window dimensions\n' >&2
-				return 1
-			fi
-			cols="${BASH_REMATCH[1]}" rows="${BASH_REMATCH[2]}"
-		fi
-		rendered="$(@REX_WHICHKEY_LUA@ @REX_WHICHKEY_DIRECTORY@/main.lua render \
-			"$prefix" "$page" "$confirmation" "$notice" "$rows" "$cols" \
-			"$width_fraction" "$height_fraction" "${REX_WHICHKEY_ASCII:-0}" \
-			"$text" "$key_style" "$border" "$muted" "$critical" "$group" "$bold" "$normal" "$background" "$mode" "$position")"
-		metadata="${rendered%%$'\n'*}"
-		if [[ ! "$metadata" =~ ^[0-9]+[[:space:]][1-9][0-9]*[[:space:]][1-9][0-9]*$ ]]; then
-			printf 'Invalid renderer paging metadata\n' >&2
+	fi
+	if [[ ! "$rows" =~ ^[0-9]+$ ]]; then rows=20; fi
+	if [[ ! "$cols" =~ ^[0-9]+$ ]]; then cols=72; fi
+	if [[ "$mode" == ansi ]]; then
+		if ! dimensions=$("$rex" -C "$client" "do" @REX_WHICHKEY_DIRECTORY@/resize.lua -s "$session" -b "$origin" "rows=0" "directory=@REX_WHICHKEY_DIRECTORY@" "position=$position" --json); then
+			printf 'Could not calculate which-key rendering area\n' >&2
 			return 1
 		fi
-		read -r page pages requested_rows <<<"$metadata"
-		if [[ "$mode" != ansi ]]; then break; fi
-	done
+		dimensions="${dimensions//[$' \t\r\n']/}"
+		if [[ ! "$dimensions" =~ ^\[([1-9][0-9]*),([1-9][0-9]*)\]$ ]]; then
+			printf 'Invalid which-key window dimensions\n' >&2
+			return 1
+		fi
+		cols="${BASH_REMATCH[1]}" rows="${BASH_REMATCH[2]}"
+	fi
+	rendered="$(@REX_WHICHKEY_LUA@ @REX_WHICHKEY_DIRECTORY@/main.lua render \
+		"$prefix" "$page" "$confirmation" "$notice" "$rows" "$cols" \
+		"$width_fraction" "$height_fraction" "${REX_WHICHKEY_ASCII:-0}" \
+		"$text" "$key_style" "$border" "$muted" "$critical" "$group" "$bold" "$normal" "$background" "$mode" "$position")"
+	metadata="${rendered%%$'\n'*}"
+	if [[ ! "$metadata" =~ ^[0-9]+[[:space:]][1-9][0-9]*[[:space:]][1-9][0-9]*$ ]]; then
+		printf 'Invalid renderer paging metadata\n' >&2
+		return 1
+	fi
+	read -r page pages _ <<<"$metadata"
 	printf '%s' "${rendered#*$'\n'}"
 	if [[ ! -t 1 ]]; then printf '\n'; fi
 }

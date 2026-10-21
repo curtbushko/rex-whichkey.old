@@ -153,7 +153,7 @@ OSC 4 for yellow keys (3), gray borders/help (8), red close/confirmation items
 (1), and cyan-slot submenus (6). The theme determines each slot's actual hue.
 The popup background blends 12% foreground into the terminal background so the
 surface is distinct on dark and light themes. Semantic colors are adjusted for
-contrast. Missing replies use internal fallbacks; querying has a bounded timeout.
+contrast. Missing replies use internal fallbacks after a 50 ms total query budget.
 No Stylix, Ghostty configuration, or theme file is required.
 
 Set `NO_COLOR=1` for uncolored output or `REX_WHICHKEY_ASCII=1` for plain borders
@@ -203,6 +203,19 @@ task check
 ```
 
 `task fmt` formats sources. `task build` builds both package outputs.
+
+Preview the current checkout directly in your terminal (inside `nix develop`):
+
+```sh
+task test:manual
+task test:manual POSITION=center
+```
+
+This builds the helper and opens an interactive preview of the default menu.
+Navigation, pagination, and confirmations work; selecting an action only closes
+it. No Rex server or installed configuration is needed. Escape/q closes the
+preview and restores your terminal. This tests terminal rendering, not Rex's
+floating-layer integration.
 
 Lua-specific commands inside the dev shell:
 

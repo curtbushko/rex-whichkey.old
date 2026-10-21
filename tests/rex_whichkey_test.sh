@@ -62,6 +62,9 @@ expect_choice 't\033v' v
 expect_choice 't\177s' s
 # Unknown input must not execute an action.
 expect_choice '?v' v
+# Theme replies arriving after discovery must not close or navigate the menu.
+expect_choice '\033]10;rgb:ffff/eeee/dddd\007v' v
+expect_choice '\033]11;rgb:1111/2222/3333\033\\v' v
 for input in q '\033' '' 'txnq' 'wxnq' 'xnq' 'mnq' 'rkq'; do
 	run_menu "$input"
 	[[ ! -s "$REX_TEST_LOG" ]]

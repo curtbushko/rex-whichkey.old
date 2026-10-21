@@ -43,6 +43,12 @@ terminal_theme_collect < <(printf '\033]10;rgb:bad\007q\033')
 terminal_pending_keys=''
 terminal_theme_collect < <(printf '\033]10;rgb:ffff/eeee')
 [[ -z $terminal_pending_keys && ${#terminal_colors[@]} == 0 ]]
+[[ $terminal_input_osc == 1 ]]
+for byte in / 0 0 $'\007'; do
+	if terminal_key_filter "$byte"; then exit 1; fi
+done
+terminal_key_filter v
+[[ $terminal_input_osc == 0 ]]
 terminal_theme_collect < <(
 	printf '\033]10;'
 	printf '%0300d' 0
@@ -52,10 +58,27 @@ terminal_theme_collect < <(
 start=${EPOCHREALTIME/./}
 terminal_theme_collect < <(sleep 1)
 elapsed=$((${EPOCHREALTIME/./} - start))
-[[ $elapsed -lt 900000 ]] || {
+[[ $elapsed -lt 150000 ]] || {
 	printf 'Theme query exceeded total time budget\n' >&2
 	exit 1
 }
 [[ $(terminal_theme_color background '#123456') == '#123456' ]]
 [[ $(terminal_theme_read </dev/null) == '' ]]
+# Late OSC replies (both terminators, including fragmented bodies) are not keys.
+for terminator in $'\007' $'\033\\'; do
+	terminal_pending_keys=''
+	if terminal_key_filter $'\033' <<<']'; then exit 1; fi
+	for byte in 1 0 ';' r g b ':' f f / 0 0 / 0 0; do
+		if terminal_key_filter "$byte"; then exit 1; fi
+	done
+	for ((i = 0; i < ${#terminator}; i++)); do
+		if terminal_key_filter "${terminator:i:1}"; then exit 1; fi
+	done
+	terminal_key_filter v
+	[[ $terminal_input_osc == 0 && -z $terminal_pending_keys ]]
+done
+# Bare Escape and the key immediately following it retain their menu meanings.
+terminal_key_filter $'\033' </dev/null
+terminal_key_filter $'\033' <<<v
+[[ $terminal_pending_keys == v ]]
 printf 'Rex OSC theme parsing, semantic colors, fallbacks and typeahead: passed\n'
