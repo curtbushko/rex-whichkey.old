@@ -29,6 +29,8 @@ in
   assert disabled.config.xdg.configFile == {};
   assert !(enabled.config.xdg.configFile ? "rex/init.lua");
   assert toString installed == toString expected;
+  assert toString enabled.config.xdg.configFile."rex/whichkey/rex-whichkey".source
+  == "${enabled.config.programs.rex-whichkey.package}/bin/rex-whichkey";
     pkgs.runCommand "rex-whichkey-home-manager-check" {} ''
       test -f ${installed}
       grep -F 'local cli = "/test/rex"' ${installed}

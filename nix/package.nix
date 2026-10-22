@@ -24,8 +24,8 @@
     '';
   };
   plugin = pkgs.writeText "rex-whichkey-plugin.lua" (builtins.replaceStrings
-    ["\"@REX_WHICHKEY_DIRECTORY@\"" "\"@REX_WHICHKEY_COMMAND@\"" "\"@REX_CLI@\""]
-    [(builtins.toJSON "${library}") (builtins.toJSON "${helper}/bin/rex-whichkey") (builtins.toJSON rexCli)]
+    ["\"@REX_WHICHKEY_DIRECTORY@\"" "\"@REX_CLI@\""]
+    [(builtins.toJSON "${library}") (builtins.toJSON rexCli)]
     (builtins.readFile ../lua/whichkey/plugin.lua));
 in
   helper // {inherit plugin;}

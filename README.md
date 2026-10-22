@@ -38,8 +38,9 @@ programs.rex-whichkey = {
 };
 ```
 
-The module installs only `rex/whichkey/plugin.lua` under your XDG config
-directory. **It does not overwrite or generate your Rex `init.lua`.**
+The module installs `rex/whichkey/plugin.lua` and the native helper at
+`rex/whichkey/rex-whichkey` under your XDG config directory.
+**It does not overwrite or generate your Rex `init.lua`.**
 It also does not install Rex, enable Remote Control, or select the app's theme.
 Enable Rex's Remote Control so the helper can request menu data and dispatch actions.
 
@@ -57,6 +58,25 @@ rex.bind("ctrl+b>space", "whichkey")
 
 Apply your Home Manager configuration and run `rex config reload`. Keep your
 existing Rex bindings/actions; only add the plugin setup once.
+
+### Remote servers
+
+Install the plugin and a native helper for each account running a remote Rex
+server, not just on the client machine. The popup resolves
+`${XDG_CONFIG_HOME:-$HOME/.config}/rex/whichkey/rex-whichkey` on the target
+machine through `/bin/sh`, without login-shell initialization or a client-side
+Nix store path. Nix-managed symlinks keep that location stable across upgrades.
+Keep the client and server plugin versions in sync.
+
+Use the default `rexCli = "rex"` for configurations shared with remote hosts.
+The helper resolves it through the target terminal's `REX_BIN_DIR` when set,
+otherwise through `PATH`. An explicit CLI path must exist on the target host.
+
+Rex's login server loads each account's `$XDG_CONFIG_HOME/rex/init.lua`, or
+`~/.config/rex/init.lua` by default. `REX_CONFIG` in the server environment can
+override it; `rex server run --config PATH` also selects a config file. The
+shared-server account instead defaults to `/var/lib/rex/.config/rex/init.lua`.
+See the [Rex configuration documentation](https://www.superlogical.com/rex/docs/customize/config).
 
 ### Private repository or local development
 
@@ -180,8 +200,11 @@ let
     rexCli = "/absolute/path/to/rex";
   };
 in {
+  xdg.configFile."rex/whichkey/plugin.lua".source = whichkey.plugin;
+  xdg.configFile."rex/whichkey/rex-whichkey".source = "${whichkey}/bin/rex-whichkey";
   xdg.configFile."rex/init.lua".text = ''
-    local whichkey = dofile("${whichkey.plugin}")
+    local config_home = os.getenv("XDG_CONFIG_HOME") or (os.getenv("HOME") .. "/.config")
+    local whichkey = dofile(config_home .. "/rex/whichkey/plugin.lua")
     whichkey.setup({ position = "center" })
     rex.bind("alt+space", "whichkey")
   '';

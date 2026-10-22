@@ -1,7 +1,6 @@
 -- Rex Lua 5.1 plugin entry point. Runtime paths are filled by the package.
 local M = {}
 local directory = "@REX_WHICHKEY_DIRECTORY@"
-local command = "@REX_WHICHKEY_COMMAND@"
 local cli = "@REX_CLI@"
 local Mappings = dofile(directory .. "/mappings.lua")
 local Areas = dofile(directory .. "/areas.lua")
@@ -68,7 +67,11 @@ function M.setup(opts)
 						shell = "none",
 						login = false,
 						command = {
-							command,
+							-- Expand on the target host, never in the client's environment.
+							"/bin/sh",
+							"-c",
+							'exec "${XDG_CONFIG_HOME:-$HOME/.config}/rex/whichkey/rex-whichkey" "$@"',
+							"rex-whichkey",
 							cli,
 							ctx.client_id,
 							ctx.session_id,

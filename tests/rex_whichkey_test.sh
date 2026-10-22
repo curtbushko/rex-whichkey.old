@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-for command in awk bash chmod cmp dirname grep mkdir mktemp mv; do
+for command in awk bash chmod cmp dirname grep ln mkdir mktemp mv; do
 	command -v "$command" >/dev/null || {
 		printf '%s is required\n' "$command" >&2
 		exit 1
@@ -45,6 +45,12 @@ expect_choice() {
 	printf '%s\n' -C app-client "do" whichkey_dispatch -s session-id -b origin-pane "lhs=$lhs" "confirmed=$confirmed" >"$work/expected"
 	cmp "$work/expected" "$REX_TEST_LOG"
 }
+
+# Rex supplies its own CLI directory, even without an interactive shell PATH.
+mkdir -p "$work/rex-bin"
+ln -s "$mock" "$work/rex-bin/rex"
+printf v | REX_BIN_DIR="$work/rex-bin" "$script" rex app-client session-id origin-pane '#3d484d' '#d3c6aa' '#dbbc7f' '#859289' '#9da9a0' '#e67e80' '#7fbbb3' >"$work/output" 2>&1
+grep -q 'lhs=v' "$REX_TEST_LOG"
 
 # A Rex-side inline spec reaches both frontend rendering and key dispatch.
 export REX_WHICHKEY_SNAPSHOT='{"version":1,"title":"Custom","position":"center","entries":[{"lhs":"g","action":false,"group":"Tools"},{"lhs":"gx","action":true,"desc":"Custom callback","confirm":true}]}'

@@ -62,14 +62,19 @@ navigation help where possible.
 ## Packaging and checks
 
 `nix/package.nix` substitutes the Lua executable/library paths in `helper.sh`
-and the helper/library/Rex CLI paths in `plugin.lua`. Its derivation exports a
+and the library/Rex CLI paths in `plugin.lua`. The popup starts `/bin/sh` with
+an argument-safe command that resolves the helper under the target host's XDG
+config directory. No helper store path is sent from the client. Its derivation exports a
 `.plugin` attribute containing the generated Lua entry point. The Nix wrapper
 contains no menu or shell implementation.
 
 The Home Manager module installs that entry point at
-`$XDG_CONFIG_HOME/rex/whichkey/plugin.lua` without taking ownership of `init.lua`.
+`$XDG_CONFIG_HOME/rex/whichkey/plugin.lua` and links the executable at
+`$XDG_CONFIG_HOME/rex/whichkey/rex-whichkey`, without taking ownership of `init.lua`.
 The module accepts a CLI path and an optional replacement package. Consumers
-can instead use `lib.mkPackage` and interpolate `.plugin` into their own config.
+can instead use `lib.mkPackage` and install those same two config files.
+Remote servers need their own native helper and account configuration. The
+helper uses `REX_BIN_DIR` for the default `rex` CLI, falling back to `PATH`.
 
 `nix flake check` runs Luacheck, Lua 5.1 parser checks for Rex-facing code,
 the Lua layout/area/controller/mapping/plugin suites,

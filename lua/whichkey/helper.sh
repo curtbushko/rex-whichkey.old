@@ -4,7 +4,12 @@ if [[ $# -ne 11 && $# -ne 13 && $# -ne 14 ]]; then
 	printf 'usage: rex-whichkey REX_CLI CLIENT SESSION ORIGIN_PANE BG FG KEY BORDER MUTED CRITICAL GROUP [WIDTH_FRACTION HEIGHT_FRACTION [POSITION]]\n' >&2
 	exit 2
 fi
-rex=$(command -v "$1") || {
+# Rex terminals inherit the target server's CLI directory, not the client's.
+rex_cli="$1"
+if [[ "$rex_cli" == rex && -n "${REX_BIN_DIR:-}" ]]; then
+	rex_cli="$REX_BIN_DIR/rex"
+fi
+rex=$(command -v "$rex_cli") || {
 	printf 'Rex executable not found: %s\n' "$1" >&2
 	exit 2
 }

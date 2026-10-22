@@ -25,5 +25,6 @@ in {
   config = lib.mkIf cfg.enable {
     # Do not own init.lua: users may already have Rex bindings and actions there.
     xdg.configFile."rex/whichkey/plugin.lua".source = cfg.package.plugin;
+    xdg.configFile."rex/whichkey/rex-whichkey".source = "${cfg.package}/bin/rex-whichkey";
   };
 }

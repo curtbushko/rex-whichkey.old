@@ -78,8 +78,8 @@ assert(snapshot.title == "Custom" and snapshot.position == "right")
 local Mappings = real_dofile(directory .. "/mappings.lua")
 local front = Mappings.new(Mappings.config_from_snapshot(snapshot))
 assert(front:get("gnr").desc == "Split right" and front:get("gx").confirm and not front:get("d"))
--- Popup lifecycle remains host-independent: origin window, direct execution,
--- no login banner, and immediate cleanup even for quick exits.
+-- Resolve the helper on the target host, not through a client store path.
+-- No login banner, and immediate cleanup even for quick exits.
 local ctx = { client_id = "client", session_id = "session", block_id = "origin" }
 actions.whichkey.run(ctx, {})
 local layer = calls[1]
@@ -88,10 +88,13 @@ assert(layer.bounds.x == 0 and layer.bounds.y == 0 and layer.bounds.w == 1 and l
 local options = layer.layout.block.options
 assert(options.shell == "none" and options.login == false)
 assert(options.exit.on_completion and options.exit.quick_exit_threshold_ms == 0)
-assert(options.command[3] == "client" and options.command[5] == "origin" and options.command[15] == "right")
+assert(options.command[1] == "/bin/sh" and options.command[2] == "-c")
+assert(options.command[3] == 'exec "${XDG_CONFIG_HOME:-$HOME/.config}/rex/whichkey/rex-whichkey" "$@"')
+assert(options.command[4] == "rex-whichkey")
+assert(options.command[6] == "client" and options.command[8] == "origin" and options.command[18] == "right")
 calls = {}
 actions.whichkey.run(ctx, { position = "left" })
-assert(calls[1].layout.block.options.command[15] == "left")
+assert(calls[1].layout.block.options.command[18] == "left")
 calls = {}
 assert(not pcall(actions.whichkey.run, ctx, { position = "invalid" }) and #calls == 0)
 assert(not pcall(actions.whichkey.run, {}, {}) and #calls == 0)
