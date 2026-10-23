@@ -29,7 +29,8 @@ cleanup() {
 trap cleanup EXIT
 export REX_TEST_LOG="$work/calls"
 mock="$work/rex cli"
-printf '%s\n' '#!/usr/bin/env bash' 'set -euo pipefail' \
+# The Nix build sandbox has Bash on PATH, but no /usr/bin/env.
+printf '%s\n' "#!$(command -v bash)" 'set -euo pipefail' \
 	"printf '%s\\n' \"\$@\" >>\"\$REX_TEST_LOG\"" \
 	"exit \"\${REX_TEST_EXIT:-0}\"" >"$mock"
 chmod +x "$mock"
