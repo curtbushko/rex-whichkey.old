@@ -31,6 +31,13 @@ export REX_TEST_LOG="$work/calls"
 mock="$work/rex cli"
 # The Nix build sandbox has Bash on PATH, but no /usr/bin/env.
 printf '%s\n' "#!$(command -v bash)" 'set -euo pipefail' \
+	"if [[ \"\${1:-}\" == do ]]; then" \
+	"  [[ -z \"\${REX_CLIENT+x}\" ]] || exit 1" \
+	"  [[ \"\${2:-}\" == -s && \"\${3:-}\" == session-id && \"\${4:-}\" == -b && \"\${5:-}\" == origin-pane ]] || exit 1" \
+	"  [[ \"\${REX_TEST_OWNER_EXIT:-0}\" == 0 ]] || exit 1" \
+	"  printf '\"%s\"\\n' \"\${REX_TEST_OWNER:-}\"" \
+	"  exit 0" \
+	"fi" \
 	"printf '%s\\n' \"\$@\" >>\"\$REX_TEST_LOG\"" \
 	"exit \"\${REX_TEST_EXIT:-0}\"" >"$mock"
 chmod +x "$mock"
@@ -52,6 +59,21 @@ mkdir -p "$work/rex-bin"
 ln -s "$mock" "$work/rex-bin/rex"
 printf v | REX_BIN_DIR="$work/rex-bin" "$script" rex app-client session-id origin-pane '#3d484d' '#d3c6aa' '#dbbc7f' '#859289' '#9da9a0' '#e67e80' '#7fbbb3' >"$work/output" 2>&1
 grep -q 'lhs=v' "$REX_TEST_LOG"
+
+# A relayed action can name the Mac's client, not the target server's client.
+remote_client="client:aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee"
+REX_CLIENT=stale-local-client REX_TEST_OWNER="$remote_client" run_menu v
+printf '%s\n' -C "$remote_client" "do" whichkey_dispatch -s session-id -b origin-pane lhs=v confirmed=false >"$work/expected"
+cmp "$work/expected" "$REX_TEST_LOG"
+# Ownerless panes preserve the explicitly supplied client.
+expect_choice v v
+# Lookup failures and malformed owners must fail before rendering or dispatch.
+if REX_TEST_OWNER_EXIT=1 run_menu v; then exit 1; fi
+grep -q 'Could not resolve which-key target client' "$work/output"
+[[ ! -s "$REX_TEST_LOG" ]]
+if REX_TEST_OWNER=invalid run_menu v; then exit 1; fi
+grep -q 'Invalid which-key target client' "$work/output"
+[[ ! -s "$REX_TEST_LOG" ]]
 
 # A Rex-side inline spec reaches both frontend rendering and key dispatch.
 export REX_WHICHKEY_SNAPSHOT='{"version":1,"title":"Custom","position":"center","entries":[{"lhs":"g","action":false,"group":"Tools"},{"lhs":"gx","action":true,"desc":"Custom callback","confirm":true}]}'

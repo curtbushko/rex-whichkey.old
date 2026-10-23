@@ -75,6 +75,10 @@ The module accepts a CLI path and an optional replacement package. Consumers
 can instead use `lib.mkPackage` and install those same two config files.
 Remote servers need their own native helper and account configuration. The
 helper uses `REX_BIN_DIR` for the default `rex` CLI, falling back to `PATH`.
+It clears `REX_CLIENT` for an initial session-view query and uses the originating
+pane's owner for subsequent client-scoped calls. This avoids addressing a Mac-local
+client ID on the remote server. Unowned panes retain the supplied client ID;
+failed lookups or malformed owner IDs stop the helper before dispatch.
 
 `nix flake check` runs Luacheck, Lua 5.1 parser checks for Rex-facing code,
 the Lua layout/area/controller/mapping/plugin suites,

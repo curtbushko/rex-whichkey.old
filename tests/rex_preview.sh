@@ -2,6 +2,10 @@
 set -euo pipefail
 
 # Act as the helper's CLI without contacting Rex or executing any menu actions.
+if [[ ${1:-} == "do" ]]; then
+	printf '""\n'
+	exit 0
+fi
 if [[ ${1:-} == -C ]]; then
 	case "${4:-}" in
 	whichkey_snapshot)

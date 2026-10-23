@@ -41,6 +41,28 @@ for color in "${@:5:7}"; do
 		exit 2
 	fi
 done
+# Client IDs are server-local; relayed actions can carry the Mac's local ID.
+# Resolve the target pane's owner without inheriting a stale REX_CLIENT.
+if ! owner=$(env -u REX_CLIENT "$rex" "do" -s "$session" -b "$origin" --json -e '
+  local view = assert(rex.session.view({}))
+  for _, window in ipairs(view.windows or {}) do
+    for _, layer in ipairs(window.layers or {}) do
+      for _, block in ipairs(layer.blocks or {}) do
+        if block.block_id == rex.block_id then return block.owner or "" end
+      end
+    end
+  end
+  error("Originating pane is no longer in the session")
+'); then
+	printf 'Could not resolve which-key target client\n' >&2
+	exit 1
+fi
+if [[ "$owner" =~ ^\"(client:[[:xdigit:]-]+)\"$ ]]; then
+	client="${BASH_REMATCH[1]}"
+elif [[ "$owner" != '""' ]]; then
+	printf 'Invalid which-key target client\n' >&2
+	exit 1
+fi
 if [[ -t 1 ]]; then printf '\033]2;whichkey-popup\007\033[?25l'; fi
 # Inline setup specs live in Rex, not in a second frontend config. Transfer only
 # display metadata as JSON; callbacks and action arguments remain server-side.

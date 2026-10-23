@@ -71,6 +71,10 @@ Keep the client and server plugin versions in sync.
 Use the default `rexCli = "rex"` for configurations shared with remote hosts.
 The helper resolves it through the target terminal's `REX_BIN_DIR` when set,
 otherwise through `PATH`. An explicit CLI path must exist on the target host.
+Client IDs are server-local. Before requesting menu data, geometry, or actions,
+the helper resolves the originating pane's owner on the target server rather
+than using a client ID relayed from the Mac. An unowned pane retains the supplied
+client ID.
 
 Rex's login server loads each account's `$XDG_CONFIG_HOME/rex/init.lua`, or
 `~/.config/rex/init.lua` by default. `REX_CONFIG` in the server environment can
